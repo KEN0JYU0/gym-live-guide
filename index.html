@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikTok LIVE インサイト分析プログラム | GYM.</title>
+<style>
+:root{--navy:#0a0f1a;--navy-light:#131b2b;--navy-card:#111827;--gold:#d4a24e;--gold-light:#e8c36a;--gold-dim:rgba(212,162,78,0.12);--orange:#d4a24e;--orange-light:#e8c36a;--orange-dim:rgba(212,162,78,0.12);--white:#f4f0ea;--text:#ddd8d0;--text-sub:#8a8477;--border:rgba(212,162,78,0.10);--tiktok-cyan:#25f4ee;--tiktok-red:#fe2c55;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;background:var(--navy);color:var(--text);line-height:1.85;}
+::selection{background:var(--orange);color:var(--navy);}
+
+/* ===== HERO ===== */
+.hero{background:linear-gradient(170deg,#060a12 0%,#0c1322 50%,#111a2e 100%);text-align:center;padding:64px 20px 52px;position:relative;overflow:hidden;border-bottom:1px solid rgba(212,162,78,0.25);}
+.hero::before{content:'';position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(212,162,78,0.05),transparent 70%);top:-250px;right:-150px;}
+.hero::after{content:'';position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(212,162,78,0.03),transparent 70%);bottom:-200px;left:-100px;}
+.hero-logos{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:24px;position:relative;z-index:1;}
+.hero-logos img{height:140px;border-radius:0;filter:drop-shadow(0 4px 20px rgba(212,162,78,0.3));}
+.hero h1{font-size:24px;font-weight:700;color:var(--white);position:relative;z-index:1;letter-spacing:0.06em;text-transform:uppercase;}
+.hero h1 .tt{background:linear-gradient(90deg,var(--tiktok-cyan),var(--tiktok-red));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero .sub{font-size:13px;color:var(--text-sub);margin-top:10px;position:relative;z-index:1;letter-spacing:0.02em;font-weight:300;}
+.hero .meta{display:flex;justify-content:center;gap:16px;margin-top:20px;font-size:11px;color:var(--text-sub);position:relative;z-index:1;flex-wrap:wrap;}
+.hero .meta span{background:rgba(212,162,78,0.06);padding:5px 16px;border-radius:20px;border:1px solid rgba(212,162,78,0.15);letter-spacing:0.03em;}
+
+/* ===== TOC ===== */
+nav.toc{background:var(--navy-light);border-bottom:1px solid var(--border);padding:0;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px);}
+.toc-inner{max-width:920px;margin:0 auto;}
+.toc-toggle{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;cursor:pointer;user-select:none;}
+.toc-toggle:hover{background:rgba(255,255,255,0.03);}
+.toc-toggle h2{font-size:11px;text-transform:uppercase;letter-spacing:0.15em;color:var(--orange);margin:0;}
+.toc-toggle .arrow{color:var(--orange);font-size:14px;transition:transform .25s ease;}
+.toc-toggle .arrow.open{transform:rotate(180deg);}
+.toc-body{max-height:0;overflow:hidden;transition:max-height .3s ease;padding:0 20px;}
+.toc-body.open{max-height:500px;padding:0 20px 14px;}
+.toc ol{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:3px 16px;list-style:none;counter-reset:tc;}
+.toc li{counter-increment:tc;}
+.toc a{text-decoration:none;color:var(--text-sub);font-size:12.5px;display:block;padding:3px 0;transition:color .2s;}
+.toc a:hover{color:var(--orange);}
+.toc a::before{content:counter(tc)". ";color:var(--orange);font-weight:700;}
+
+/* ===== CONTAINER ===== */
+.container{max-width:920px;margin:0 auto;padding:0 20px 80px;}
+section{margin-top:52px;}
+section>h2{font-size:18px;font-weight:700;color:var(--white);padding-bottom:10px;border-bottom:1px solid rgba(212,162,78,0.2);margin-bottom:24px;letter-spacing:0.04em;}
+h3{font-size:15px;font-weight:600;color:var(--gold-light);margin:28px 0 12px;padding-left:14px;border-left:2px solid var(--gold);}
+h4{font-size:14px;font-weight:600;color:var(--gold);margin:18px 0 8px;}
+p{margin:8px 0;font-size:14px;color:var(--text);}
+strong{color:var(--white);}
+ul,ol{margin:8px 0 8px 22px;font-size:14px;color:var(--text);}
+li{margin:4px 0;}
+li::marker{color:var(--orange);}
+
+/* ===== FORMULA ===== */
+.formula{background:linear-gradient(135deg,rgba(212,162,78,0.08),rgba(212,162,78,0.02));border:1px solid rgba(212,162,78,0.2);border-radius:12px;padding:28px 32px;margin:20px 0;text-align:center;font-size:20px;font-weight:700;color:var(--gold-light);letter-spacing:.05em;}
+.formula small{display:block;font-size:12px;font-weight:400;color:var(--text-sub);margin-top:10px;letter-spacing:0.02em;}
+
+/* ===== TABLE ===== */
+table{width:100%;border-collapse:collapse;margin:14px 0 20px;font-size:13px;}
+th{background:rgba(212,162,78,0.08);color:var(--gold-light);padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid rgba(212,162,78,0.25);font-size:12px;text-transform:uppercase;letter-spacing:0.05em;}
+td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text);}
+tr:hover td{background:rgba(255,255,255,0.02);}
+
+/* ===== CALLOUT ===== */
+.callout{background:rgba(212,162,78,0.05);border-left:2px solid var(--gold);padding:14px 18px;border-radius:0 8px 8px 0;margin:16px 0;font-size:13px;}
+.callout strong{display:block;margin-bottom:4px;color:var(--gold-light);font-weight:600;}
+.callout.danger{background:rgba(254,44,85,0.06);border-left-color:var(--tiktok-red);}
+.callout.danger strong{color:var(--tiktok-red);}
+.callout.info{background:rgba(212,162,78,0.04);border-left-color:var(--gold-light);}
+.callout.info strong{color:var(--gold-light);}
+.callout.optional{background:rgba(255,255,255,0.02);border-left-color:var(--text-sub);font-style:italic;}
+.callout.optional strong{color:var(--text-sub);}
+
+/* ===== CARD ===== */
+.card{background:var(--navy-card);border:1px solid rgba(212,162,78,0.08);border-radius:10px;padding:24px;margin:16px 0;}
+
+/* ===== CODE/PRE ===== */
+pre{background:#080c16;color:var(--text);border:1px solid rgba(212,162,78,0.06);border-radius:8px;padding:18px 22px;margin:12px 0;overflow-x:auto;font-family:"SF Mono","Fira Code",monospace;font-size:12px;line-height:1.75;}
+
+/* ===== FLOW ===== */
+.flow{display:flex;flex-direction:column;gap:0;margin:16px 0;}
+.flow-step{display:flex;align-items:flex-start;gap:12px;padding:10px 0;}
+.flow-icon{width:30px;height:30px;border-radius:50%;background:var(--gold);color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;}
+.flow-arrow{text-align:center;color:var(--gold);font-size:14px;line-height:1;opacity:0.6;}
+
+/* ===== PHASE HEADER ===== */
+.phase-header{display:flex;align-items:center;gap:16px;margin:44px 0 20px;padding:20px 24px;border-radius:14px;border:1px solid var(--border);}
+.phase-header.p0{background:linear-gradient(90deg,rgba(255,255,255,0.03),transparent);}
+.phase-header.p1{background:linear-gradient(90deg,rgba(76,175,80,0.1),transparent);border-color:rgba(76,175,80,0.3);}
+.phase-header.p2{background:linear-gradient(90deg,rgba(33,150,243,0.1),transparent);border-color:rgba(33,150,243,0.3);}
+.phase-header.p3{background:linear-gradient(90deg,rgba(245,166,35,0.1),transparent);border-color:rgba(245,166,35,0.3);}
+.phase-num{font-size:36px;font-weight:900;line-height:1;}
+.phase-header.p0 .phase-num{color:var(--text-sub);}
+.phase-header.p1 .phase-num{color:#4caf50;}
+.phase-header.p2 .phase-num{color:#64b5f6;}
+.phase-header.p3 .phase-num{color:var(--orange);}
+.phase-info h2{font-size:17px;border:none!important;padding:0!important;margin:0!important;color:var(--white);}
+.phase-info p{font-size:12.5px;margin:2px 0 0;color:var(--text-sub);}
+
+/* ===== VISUAL PANELS (配信環境) ===== */
+.vis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:16px 0;}
+.vis-panel{background:var(--navy-card);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center;position:relative;overflow:hidden;}
+.vis-panel .icon{font-size:48px;margin-bottom:10px;display:block;}
+.vis-panel h4{margin:0 0 8px;color:var(--orange);}
+.vis-panel p{font-size:12.5px;text-align:left;color:var(--text-sub);}
+.vis-panel .tag{position:absolute;top:10px;right:10px;background:var(--orange);color:var(--navy);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;}
+/* visual diagram for lighting */
+.light-diagram{width:100%;height:120px;position:relative;margin:8px 0;}
+.light-diagram .person{width:36px;height:48px;background:rgba(255,255,255,0.15);border-radius:18px 18px 8px 8px;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);}
+.light-diagram .ring{width:20px;height:20px;border-radius:50%;border:2px solid var(--orange);position:absolute;animation:pulse 2s infinite;}
+.light-diagram .ring.front{left:50%;top:12px;transform:translateX(-50%);}
+.light-diagram .ring.bottom{left:50%;bottom:8px;transform:translateX(-50%);}
+.light-diagram .ring.back{left:50%;top:4px;transform:translateX(-50%);border-color:var(--orange-light);opacity:.5;}
+.light-diagram .ray{position:absolute;background:linear-gradient(to bottom,rgba(245,166,35,0.4),transparent);width:2px;}
+.light-diagram .ray.f{height:30px;left:50%;top:32px;transform:translateX(-50%);}
+.light-diagram .ray.b1{height:20px;left:38%;top:36px;transform:rotate(-15deg);}
+.light-diagram .ray.b2{height:20px;right:38%;top:36px;transform:rotate(15deg);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+/* camera angle diagram */
+.cam-diagram{width:100%;height:120px;position:relative;margin:8px 0;}
+.cam-diagram .face{width:40px;height:50px;border:2px solid rgba(255,255,255,0.2);border-radius:20px 20px 12px 12px;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);}
+.cam-diagram .eye{width:6px;height:6px;background:var(--white);border-radius:50%;position:absolute;top:35%;}
+.cam-diagram .eye.l{left:25%;}
+.cam-diagram .eye.r{right:25%;}
+.cam-diagram .cam{width:24px;height:16px;border:2px solid var(--orange);border-radius:4px;position:absolute;}
+.cam-diagram .cam.ok{right:15%;top:30%;transform:rotate(-10deg);}
+.cam-diagram .arrow{color:var(--orange);position:absolute;font-size:20px;}
+.cam-diagram .arrow.a1{right:25%;top:50%;}
+/* background vis */
+.bg-diagram{width:100%;height:120px;position:relative;margin:8px 0;border-radius:8px;overflow:hidden;}
+.bg-diagram .wall{width:100%;height:100%;background:linear-gradient(180deg,#1a1a2e,#16213e);}
+.bg-diagram .neon{position:absolute;border-radius:50%;filter:blur(12px);opacity:.6;}
+.bg-diagram .n1{width:40px;height:40px;background:var(--tiktok-red);top:15px;left:20px;}
+.bg-diagram .n2{width:30px;height:30px;background:var(--orange);top:50px;right:30px;}
+.bg-diagram .n3{width:25px;height:25px;background:var(--tiktok-cyan);bottom:10px;left:50%;}
+.bg-diagram .silhouette{width:50px;height:70px;background:rgba(255,255,255,0.08);border-radius:25px 25px 10px 10px;position:absolute;left:50%;bottom:0;transform:translateX(-50%);}
+
+/* ===== CHECKLIST ===== */
+.checklist{list-style:none;margin-left:0;}
+.checklist li{padding:7px 0 7px 30px;position:relative;}
+.checklist li::before{content:'';position:absolute;left:0;top:10px;width:16px;height:16px;border:1.5px solid var(--gold);border-radius:3px;}
+
+/* ===== FOOTER ===== */
+footer{text-align:center;padding:48px 20px;border-top:1px solid rgba(212,162,78,0.15);color:var(--text-sub);font-size:11px;margin-top:60px;letter-spacing:0.03em;}
+footer img{height:48px;margin-bottom:14px;border-radius:0;filter:drop-shadow(0 2px 8px rgba(212,162,78,0.2));}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:600px){.hero h1{font-size:19px;}.toc ol{grid-template-columns:1fr;}table{font-size:11.5px;}th,td{padding:8px 10px;}.phase-header{flex-direction:column;gap:8px;}.vis-grid{grid-template-columns:1fr;}}
+@media print{body{background:#fff;color:#222;}nav.toc{position:static;}.hero{border-bottom-color:#333;}th{background:#f0f0f0;color:#333;}td{color:#222;}.callout{border-left-color:#888;background:#f8f8f8;}}
+</style>
+</head>
+<body>
+
+<!-- ===== HERO ===== -->
+<div class="hero">
+  <div class="hero-logos"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAAAAXNSR0IArs4c6QAAAQZlWElmTU0AKgAAAAgABwESAAMAAAABAAEAAAEaAAUAAAABAAAAYgEbAAUAAAABAAAAagEoAAMAAAABAAIAAAExAAIAAAA5AAAAcgE7AAIAAAALAAAArIdpAAQAAAABAAAAuAAAAAAAAABgAAAAAQAAAGAAAAABQ2FudmEgZG9jPURBRzZGYXRTb2prIHVzZXI9VUFFVWNWU19KS0EgYnJhbmQ9QkFFVWNaR1J0MXcAAGM4NXp5ZGhjOHYAAAAGkAAABwAAAAQwMjEwkQEABwAAAAQBAgMAoAAABwAAAAQwMTAwoAEAAwAAAAEAAQAAoAIABAAAAAEAAADIoAMABAAAAAEAAADIAAAAAA10fc0AAAAJcEhZcwAADsQAAA7EAZUrDhsAAAZJaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJYTVAgQ29yZSA2LjAuMCI+CiAgIDxyZGY6UkRGIHhtbG5zOnJkZj0iaHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyI+CiAgICAgIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiCiAgICAgICAgICAgIHhtbG5zOmV4aWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vZXhpZi8xLjAvIgogICAgICAgICAgICB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iCiAgICAgICAgICAgIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICAgICAgICAgICB4bWxuczpkYz0iaHR0cDovL3B1cmwub3JnL2RjL2VsZW1lbnRzLzEuMS8iPgogICAgICAgICA8ZXhpZjpDb2xvclNwYWNlPjY1NTM1PC9leGlmOkNvbG9yU3BhY2U+CiAgICAgICAgIDxleGlmOlBpeGVsWERpbWVuc2lvbj4zMDAwPC9leGlmOlBpeGVsWERpbWVuc2lvbj4KICAgICAgICAgPGV4aWY6RXhpZlZlcnNpb24+MDIxMDwvZXhpZjpFeGlmVmVyc2lvbj4KICAgICAgICAgPGV4aWY6Rmxhc2hQaXhWZXJzaW9uPjAxMDA8L2V4aWY6Rmxhc2hQaXhWZXJzaW9uPgogICAgICAgICA8ZXhpZjpQaXhlbFlEaW1lbnNpb24+MzAwMDwvZXhpZjpQaXhlbFlEaW1lbnNpb24+CiAgICAgICAgIDxleGlmOkNvbXBvbmVudHNDb25maWd1cmF0aW9uPgogICAgICAgICAgICA8cmRmOlNlcT4KICAgICAgICAgICAgICAgPHJkZjpsaT4xPC9yZGY6bGk+CiAgICAgICAgICAgICAgIDxyZGY6bGk+MjwvcmRmOmxpPgogICAgICAgICAgICAgICA8cmRmOmxpPjM8L3JkZjpsaT4KICAgICAgICAgICAgICAgPHJkZjpsaT4wPC9yZGY6bGk+CiAgICAgICAgICAgIDwvcmRmOlNlcT4KICAgICAgICAgPC9leGlmOkNvbXBvbmVudHNDb25maWd1cmF0aW9uPgogICAgICAgICA8eG1wOkNyZWF0b3JUb29sPkNhbnZhIGRvYz1EQUc2RmF0U29qayB1c2VyPVVBRVVjVlNfSktBIGJyYW5kPUJBRVVjWkdSdDF3PC94bXA6Q3JlYXRvclRvb2w+CiAgICAgICAgIDx0aWZmOlJlc29sdXRpb25Vbml0PjI8L3RpZmY6UmVzb2x1dGlvblVuaXQ+CiAgICAgICAgIDx0aWZmOk9yaWVudGF0aW9uPjE8L3RpZmY6T3JpZW50YXRpb24+CiAgICAgICAgIDx0aWZmOlhSZXNvbHV0aW9uPjk2PC90aWZmOlhSZXNvbHV0aW9uPgogICAgICAgICA8dGlmZjpZUmVzb2x1dGlvbj45NjwvdGlmZjpZUmVzb2x1dGlvbj4KICAgICAgICAgPGRjOnRpdGxlPgogICAgICAgICAgICA8cmRmOkFsdD4KICAgICAgICAgICAgICAgPHJkZjpsaSB4bWw6bGFuZz0ieC1kZWZhdWx0Ij7lkI3np7DmnKroqK3lrprjga7jg4fjgrbjgqTjg7MgLSA0PC9yZGY6bGk+CiAgICAgICAgICAgIDwvcmRmOkFsdD4KICAgICAgICAgPC9kYzp0aXRsZT4KICAgICAgICAgPGRjOmNyZWF0b3I+CiAgICAgICAgICAgIDxyZGY6U2VxPgogICAgICAgICAgICAgICA8cmRmOmxpPmM4NXp5ZGhjOHY8L3JkZjpsaT4KICAgICAgICAgICAgPC9yZGY6U2VxPgogICAgICAgICA8L2RjOmNyZWF0b3I+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgoldhFfAAA2mUlEQVR4Ae2dB4AU5dnH39mZ7eX60ZGOSJMuYAFFUBE7xIaxfcGeolETTUJiYj5LjDWKDbsGLBgQFaX33oWjHVe4XrbP7s7uzPd/5rgE5Q7uuEO/7/MZXXZvdupv3ud96vuuELwwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2iUgNToNz/sF7a7J/dIa5PrdYmYEGWRqLb567zQyioR+mEvi8/+YyPwv0JAfjauW9olU8cNbp/rHe2ypoYqUryHSMZyUrGYMxaJCjWWSCU0IxBRk0X+oLql8FBg8btzdqzYVi4qfmwPjO/3+yXwQwqI/MW795zdsa37mgyPcb7XLXXxui3CiAZEoLJK+KuDIhyEcETjQlUTQkukhCEkIVsVoRkWEYgmS4srwp8sXVv80qcbI9u/X2x8th8LgR9CQJQVc351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Nl3e4f88AdNO+b7uopNddO/d3X5/r86ea7rkOLzI2+HUpj9BP1dAvrfpeNsRMt1epO5btbXi3mV58X9hdZtzeyt3t82yX+Z1yD1cmECMHHvyTZBHDGH29oOVgcTSqtrUJ3nVZoa8oR+y+b5uk8/z/4jA9yog9dy6e0S/Dh1sP+2YZb+8fYate9tMO2Y4xG9xo0yFch004RxFoDAQSuwpDs07VB567sO1kYXYX+mRI05zK6ILSpYcSBIHoThKyitFEcIVFMozDbD68/A7E2gpgR9EQOovGsHfzC7txegcn3Vcmtc6LMtr6+ZzK5lpHrsVJQL4rYq60uYDZVGxryi4vbI2/k5Jrf5KYUDQTCS8MIGTTuAHFZDv3J0j3SHaZLlEByTi29tlSxZ+686BAVdUrFSL2Q3KUOd60HFQFC8xXZvv7M1/MgEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMAEmwASYABNgAkyACTABJsAEmAATYAJMgAkwASbABJgAE2ACTIAJMIH/dwT+BwiFiEZk0LrkAAAAAElFTkSuQmCC" alt="GYM."></div>
+  <h1><span class="tt">TikTok LIVE</span> インサイト分析プログラム</h1>
+  <p class="sub">初心者ライバーが「何を見て・何をして・どう伸びるか」を理解するための完全ガイド</p>
+  <div class="meta">
+    <span>対象: 配信経験ゼロ〜3ヶ月</span>
+    <span>目標: 月収3〜6万円を90日で</span>
+    <span>株式会社ジムドット</span>
+  </div>
+</div>
+
+<!-- ===== TOC ===== -->
+<nav class="toc">
+  <div class="toc-inner">
+    <div class="toc-toggle" onclick="var b=this.nextElementSibling,a=this.querySelector('.arrow');b.classList.toggle('open');a.classList.toggle('open');">
+      <h2>Contents</h2>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="toc-body">
+    <ol>
+      <li><a href="#sec1">収益方程式</a></li>
+      <li><a href="#sec2">PHASE 0 配信前の準備</a></li>
+      <li><a href="#sec3">PHASE 1 最初の30日間</a></li>
+      <li><a href="#sec4">PHASE 2 戦略実行期</a></li>
+      <li><a href="#sec5">PHASE 3 成果回収期</a></li>
+      <li><a href="#sec6">インサイト分析</a></li>
+      <li><a href="#sec7">イベント攻略マップ</a></li>
+      <li><a href="#sec8">バトル完全ガイド</a></li>
+      <li><a href="#sec8b">パフォーマンス配信ガイド</a></li>
+      <li><a href="#sec9">配信環境チェックリスト</a></li>
+      <li><a href="#sec10">よくある失敗TOP10</a></li>
+      <li><a href="#secA">付録A 盾イベ構造</a></li>
+      <li><a href="#secB">付録B メンタルケア</a></li>
+      <li><a href="#secC">付録C トークテンプレ</a></li>
+      <li><a href="#secD">付録D 用語集</a></li>
+    </ol>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+<!-- ===== 1 ===== -->
+<section id="sec1">
+  <h2>1. 全体像｜TikTok LIVEの収益方程式</h2>
+  <div class="formula">ダイヤ &asymp; 配信時間 &times; エンゲージメント &times; 配信日数<small>エンゲージメント = バトル・パフォーマンス・コミュニケーション。3要素は掛け算、どれかゼロなら結果もゼロ。</small></div>
+  <h3>3ヶ月ロードマップ</h3>
+  <table><tr><th>期間</th><th>月間配信時間</th><th>バトル / パフォーマンス</th><th>期待ダイヤ</th><th>月収目安</th></tr>
+  <tr><td><strong>1ヶ月目</strong></td><td>60〜80h</td><td>週3〜5回 / 歌配信を軸に定時化</td><td>〜5万</td><td>〜1.5万円</td></tr>
+  <tr><td><strong>2ヶ月目</strong></td><td>80〜100h</td><td>毎日1回以上 / リクエスト制導入</td><td>5〜15万</td><td>1.5〜4.5万円</td></tr>
+  <tr><td><strong>3ヶ月目</strong></td><td>100h以上</td><td>毎日+イベント / 盾イベP部門挑戦</td><td>15〜20万</td><td>4.5〜6万円</td></tr></table>
+  <div class="callout"><strong>継続の力</strong>月間150,000ダイヤ達成者の70〜80%は翌月も150,000台を維持。一度波に乗ると安定しやすい。</div>
+  <h3>収益の流れ</h3>
+  <div class="flow">
+    <div class="flow-step"><div class="flow-icon">1</div><div><strong>リスナーが課金</strong>（コイン購入）</div></div><div class="flow-arrow">&darr;</div>
+    <div class="flow-step"><div class="flow-icon">2</div><div><strong>ギフトとして投げる</strong></div></div><div class="flow-arrow">&darr;</div>
+    <div class="flow-step"><div class="flow-icon">3</div><div><strong>配信者のダイヤに変換</strong></div></div><div class="flow-arrow">&darr;</div>
+    <div class="flow-step"><div class="flow-icon">4</div><div><strong>ダイヤ &rarr; 現金</strong>（振込で受取）</div></div>
+  </div>
+  <div class="callout info"><strong>知っておきたいこと</strong>データ上、TikTok LIVEの課金の多くはバトル中に発生する傾向があります。ただし歌配信やパフォーマンス配信で固定ファンを獲得し、枠投げ中心に安定収益を築くライバーも増えています。自分のスタイルに合った収益化の道を見つけていきましょう。</div>
+</section>
+
+<!-- ===== 2 ===== -->
+<section id="sec2">
+  <div class="phase-header p0"><div class="phase-num">00</div><div class="phase-info"><h2>PHASE 0｜配信前の準備</h2><p>面談 → アカウント設計 → 環境整備 → テスト配信</p></div></div>
+
+  <h3>アカウント設計</h3>
+  <p><strong>新規アカウントを推奨</strong>（フォロワー1万未満の場合は特に）</p>
+  <ul><li>配信専用アカウントの方がアルゴリズムが最適化されやすい</li><li>既存アカウントでの投稿は継続OK、配信は新アカオンリー</li></ul>
+
+  <h3>プロフィール設計</h3>
+  <table><tr><th>項目</th><th>設定内容</th></tr>
+  <tr><td><strong>名前</strong></td><td>覚えやすく、呼びやすい名前</td></tr>
+  <tr><td><strong>アイコン</strong></td><td>顔がはっきり見える写真（暗い・加工しすぎNG）</td></tr>
+  <tr><td><strong>自己紹介文</strong></td><td>①何をしている人か ②なぜ配信しているか ③初心者であること</td></tr>
+  <tr><td><strong>目標表示</strong></td><td>「フォロワー1,000人目指してます！」など応援しやすい目標</td></tr></table>
+  <div class="callout info"><strong>なぜ「初心者」と書くのか</strong>「育てたい」「応援したい」心理のリスナーが多い。初心者タグは弱さではなく「伸びしろの表示」。</div>
+
+  <h3>配信環境の整備</h3>
+  <div class="vis-grid">
+    <!-- 画角 -->
+    <div class="vis-panel">
+      <span class="tag">MUST</span>
+      <div class="cam-diagram">
+        <div class="face"><div class="eye l"></div><div class="eye r"></div></div>
+        <div class="cam ok"></div>
+        <div class="arrow a1">&larr;</div>
+      </div>
+      <h4>📐 画角</h4>
+      <p>目線の高さ〜やや上から。下からのアングルは首のラインが出て◎（特に女性）。端末を安定させること。</p>
+    </div>
+    <!-- ライト -->
+    <div class="vis-panel">
+      <span class="tag">MUST</span>
+      <div class="light-diagram">
+        <div class="ring front"></div>
+        <div class="ray f"></div>
+        <div class="ray b1"></div>
+        <div class="ray b2"></div>
+        <div class="person"></div>
+        <div class="ring bottom"></div>
+      </div>
+      <h4>💡 ライティング</h4>
+      <p><strong>正面</strong>: リングライト（最低限）<br><strong>下</strong>: 補助ライト（顎下の影消し）<br><strong>後ろ</strong>: 髪の立体感<br>Amazon 1,000円程度でOK</p>
+    </div>
+    <!-- 背景 -->
+    <div class="vis-panel">
+      <span class="tag">MUST</span>
+      <div class="bg-diagram">
+        <div class="wall"></div>
+        <div class="neon n1"></div>
+        <div class="neon n2"></div>
+        <div class="neon n3"></div>
+        <div class="silhouette"></div>
+      </div>
+      <h4>🎨 背景</h4>
+      <p>白壁むき出しNG。ネオン系は目を引く。トロフィー等キラキラした装飾は「すごそう」感を演出 → 同説・滞在時間UP</p>
+    </div>
+    <!-- 服装 -->
+    <div class="vis-panel">
+      <span class="tag">MUST</span>
+      <div style="font-size:64px;line-height:1.2;margin:16px 0;">👔</div>
+      <h4>服装・メイク</h4>
+      <p>メイクをする。<strong>パジャマは絶対NG</strong>。テスト配信での第一印象がその後のベースラインになる。</p>
+    </div>
+  </div>
+
+  <h3>テスト配信（初回10〜30分）</h3>
+  <p>当日、<strong>配信15分前にマネージャーと電話</strong>。</p>
+  <table><tr><th>#</th><th>伝える内容</th></tr>
+  <tr><td>1</td><td><strong>ギフトレベル</strong>：名前横の数字 = リスナーの課金額</td></tr>
+  <tr><td>2</td><td><strong>イタズラコメント</strong>：無視でOK</td></tr>
+  <tr><td>3</td><td><strong>ギフトリアクション</strong>：来たら「全力で喜ぶ」</td></tr>
+  <tr><td>4</td><td><strong>期待値調整</strong>：「今日はギフト飛びません」と伝える</td></tr></table>
+  <div class="callout"><strong>なぜ「飛ばない」と言うのか</strong>たまたま飛んだ時→「ポテンシャル高い、向いてるかも」→やる気スイッチON。期待させすぎると飛ばなかった時にモチベが折れる。</div>
+</section>
+
+<!-- ===== 3 ===== -->
+<section id="sec3">
+  <div class="phase-header p1"><div class="phase-num">01</div><div class="phase-info"><h2>PHASE 1｜最初の30日間（基盤構築期）</h2><p>目標: 月60〜80時間配信 / フォロワー1,000人</p></div></div>
+  <h3>配信時間の設計</h3>
+  <table><tr><th>項目</th><th>推奨値</th></tr>
+  <tr><td>配信時間帯</td><td><strong>16:00〜23:00</strong></td></tr>
+  <tr><td>1回の配信時間</td><td>最低<strong>1.5時間</strong></td></tr>
+  <tr><td>月間配信時間</td><td>最低60h、理想<strong>80h以上</strong></td></tr>
+  <tr><td>配信日数</td><td>毎日理想。最低<strong>週5日</strong></td></tr></table>
+  <div class="callout"><strong>お店に例える</strong>24時間365日空いてるモールで、あなたの配信は「お店」。週1のラーメン屋 vs 毎日の吉野家、どっちに入りやすい？</div>
+  <h3>最初の1週間</h3>
+  <table><tr><th>日</th><th>やること</th></tr>
+  <tr><td>1日目</td><td>テスト配信（10〜30分）→ 審査通過</td></tr>
+  <tr><td>2日目</td><td>本配信スタート（1.5h〜）。コメント読みに慣れる</td></tr>
+  <tr><td>3日目</td><td>バトル機能解放 → 初バトル（歌系は歌いながらバトルも◎）</td></tr>
+  <tr><td>4日目</td><td>ルーティン確立。同じ時間帯に配信</td></tr>
+  <tr><td>5日目</td><td>事務所メンバーと初コラボ</td></tr>
+  <tr><td>6〜7日目</td><td>配信＋バトル（or パフォーマンス）＋コラボの3本柱を回す</td></tr></table>
+  <h3>同説を上げるコツ</h3>
+  <ol><li>配信を<strong>1.5時間以上</strong>継続</li><li>コメント読み・リアクションを丁寧に</li><li><strong>数分に1回「自己紹介」</strong>する</li><li>ギフトが飛んだら大きく喜ぶ</li></ol>
+  <div class="callout danger"><strong>鉄則</strong>人が多い時ほど自己紹介。トップほど怠りがち。初心者こそ徹底。</div>
+</section>
+
+<!-- ===== 4 ===== -->
+<section id="sec4">
+  <div class="phase-header p2"><div class="phase-num">02</div><div class="phase-info"><h2>PHASE 2｜31〜60日目（戦略実行期）</h2><p>NEO STARS参戦 / バトル・パフォーマンス本格化 / ショート動画連携</p></div></div>
+  <h3>NEO STARSへの参加</h3>
+  <ul><li>配信開始<strong>3ヶ月以内</strong> / 月間<strong>20万ダイヤ以下</strong></li><li>小規模 → <strong>入賞しやすい</strong></li><li>毎月開催。初心者最大の成長機会</li></ul>
+  <h3>バトルの本格化</h3>
+  <table><tr><th>指標</th><th>目標値</th></tr>
+  <tr><td>バトル頻度</td><td>毎日1回以上</td></tr>
+  <tr><td>イベント期間中</td><td>30分おきにバトル</td></tr>
+  <tr><td>グローブ収集</td><td>イベント前に30個（&asymp;50試合分）</td></tr></table>
+
+  <h3>DM戦略について（個人の自由）</h3>
+  <div class="callout optional"><strong>参考情報</strong>DM送付は強制ではありません。やるかどうか、どの程度やるかは各自の判断です。以下は実施する場合の参考例です。</div>
+  <pre>
+① 枠に来てくれたリスナー → お礼DM
+② バトルで出会ったリスナー → 「見に来てくれてありがとう」
+③ イベント決勝前 → 決勝告知DM</pre>
+  <div class="callout"><strong>参考実績</strong>夜配信のみの主婦ライバー。平均同説8→13人からDM実施。NEO決勝で同説40人、3位入賞。決勝だけで20,000ダイヤ。</div>
+
+  <h3>ショート動画との連携</h3>
+  <ul><li>TikTokは現在、ショートからLIVEへの導線を重視</li><li>配信がない時間帯にショート投稿</li><li>日常・準備風景など配信に関連する内容が効果的</li></ul>
+</section>
+
+<!-- ===== 5 ===== -->
+<section id="sec5">
+  <div class="phase-header p3"><div class="phase-num">03</div><div class="phase-info"><h2>PHASE 3｜61〜90日目（成果回収期）</h2><p>150,000ダイヤ突破 / 中級イベントへステップアップ</p></div></div>
+  <h3>目標数値</h3>
+  <table><tr><th>指標</th><th>目標</th></tr>
+  <tr><td>月間ダイヤ</td><td><strong>150,000〜200,000</strong></td></tr>
+  <tr><td>月間配信時間</td><td><strong>100h以上</strong></td></tr>
+  <tr><td>月間配信日数</td><td><strong>24日以上</strong></td></tr>
+  <tr><td>フォロワー</td><td>3,000〜5,000人</td></tr></table>
+  <h3>150,000ダイヤの壁</h3>
+  <ul><li>150,000ダイヤは<strong>安定収益の分岐点</strong>。ここを超えると月収4.5万円以上が見えてくる</li><li>2ヶ月連続達成すると<strong>配信スタイルが確立</strong>され、翌月以降も安定しやすい</li><li><strong>75,000ダイヤ</strong>まで来た人は翌月150,000を超える確率が高い — 諦めない</li></ul>
+  <h3>中級イベント</h3>
+  <table><tr><th>イベント</th><th>内容</th></tr>
+  <tr><td><strong>事務所イベント（D4 AND等）</strong></td><td>約5日間。渋谷駅広告掲載の特典（1ヶ月160万円相当）</td></tr>
+  <tr><td><strong>LIVE Ranking（通称：盾イベ）</strong></td><td>TikTok公式、10日間、最大規模</td></tr>
+  <tr><td><strong>新人王</strong></td><td>月間160万ダイヤ以下が対象、自動エントリー</td></tr></table>
+</section>
+
+<!-- ===== 6 ===== -->
+<section id="sec6">
+  <h2>6. インサイト分析｜見るべき数字と判断基準</h2>
+  <h3>毎日チェックする5つの数字</h3>
+  <table><tr><th>#</th><th>指標</th><th>意味</th><th>良い基準</th><th>危険信号</th></tr>
+  <tr><td>1</td><td><strong>配信時間</strong></td><td>営業時間</td><td>2h以上/日</td><td>1h未満が3日続く</td></tr>
+  <tr><td>2</td><td><strong>同時視聴者</strong></td><td>集客力</td><td>前週比維持〜↑</td><td>前週比50%以下</td></tr>
+  <tr><td>3</td><td><strong>ダイヤ獲得</strong></td><td>売上</td><td>バトル日は高め</td><td>バトルしても伸びない</td></tr>
+  <tr><td>4</td><td><strong>新規フォロワー</strong></td><td>明日の候補</td><td>1配信10人↑</td><td>連日0〜2人</td></tr>
+  <tr><td>5</td><td><strong>コメント数</strong></td><td>深さ</td><td>多いほど◎</td><td>極端に少ない</td></tr></table>
+
+  <h3>ギフトレベルの読み方</h3>
+  <table><tr><th>ギフトレベル</th><th>累計課金額の目安</th></tr>
+  <tr><td>Lv.1〜10</td><td>数千円〜数万円</td></tr>
+  <tr><td><strong>Lv.30</strong></td><td>約100万円</td></tr>
+  <tr><td><strong>Lv.40</strong></td><td>約1,500万円</td></tr>
+  <tr><td><strong>Lv.50</strong></td><td>約1億6,000万円</td></tr></table>
+
+  <h3>アルゴリズムの評価基準</h3>
+  <pre>
+1. 初課金ユーザー数      ★★★★★  ← 最重要
+   └ 「初めてギフトを投げた」人が何人いるか
+
+2. 配信時間・頻度         ★★★★☆
+3. 滞在時間              ★★★★☆
+4. コメント・インタラクション ★★★☆☆
+5. フォロワー転換率       ★★★☆☆
+6. ギフト総額             ★★☆☆☆</pre>
+  <div class="callout danger"><strong>最大のポイント</strong>TikTokは「未課金ユーザーに初めて課金させた配信者」を最も評価する。だから自己紹介が重要。</div>
+</section>
+
+<!-- ===== 7 ===== -->
+<section id="sec7">
+  <h2>7. イベント攻略マップ</h2>
+  <h3>イベント一覧</h3>
+  <table><tr><th>イベント</th><th>種類</th><th>頻度</th><th>目的</th></tr>
+  <tr><td><strong>NEO STARS</strong></td><td>事務所内</td><td>毎月</td><td>新人の成長加速</td></tr>
+  <tr><td><strong>事務所PK</strong></td><td>事務所内</td><td>毎週</td><td>交流・コラボ相手作り</td></tr>
+  <tr><td><strong>D4 AND等</strong></td><td>事務所内</td><td>1〜2ヶ月</td><td>既存リスナーの投げきり</td></tr>
+  <tr><td><strong>盾イベ（LIVE Ranking）</strong></td><td>公式</td><td>2ヶ月に1回</td><td>新規リスナー獲得・知名度UP</td></tr>
+  <tr><td><strong>新人王</strong></td><td>公式</td><td>常時</td><td>160万ダイヤ以下は自動エントリー</td></tr></table>
+
+  <h3>NEO STARS 完全攻略</h3>
+  <p><strong>構造</strong>: 予選（5日間）→ 決勝（上位8人／3回戦）</p>
+  <table><tr><th>要素</th><th>具体策</th></tr>
+  <tr><td><strong>初日が最重要</strong></td><td>日付変わった瞬間に予約バトル → 最初に1位を取る</td></tr>
+  <tr><td><strong>バトル2倍</strong></td><td>予選中はギフト2倍換算 (1分=20pt)</td></tr>
+  <tr><td><strong>目標順位</strong></td><td>6〜8位通過を狙う</td></tr>
+  <tr><td><strong>グローブ30個</strong></td><td>マスト。30個&rarr;約50試合&rarr;新規接点が爆増</td></tr></table>
+
+  <h4>グローブ30個の威力</h4>
+  <div class="flow">
+    <div class="flow-step"><div class="flow-icon">1</div><div>グローブ30個集める</div></div><div class="flow-arrow">&darr;</div>
+    <div class="flow-step"><div class="flow-icon">2</div><div>約50試合バトル</div></div><div class="flow-arrow">&darr;</div>
+    <div class="flow-step"><div class="flow-icon">3</div><div>「30個集めてる新人なんていない」→ リスナーが驚く</div></div><div class="flow-arrow">&darr;</div>
+    <div class="flow-step"><div class="flow-icon">4</div><div>プロフィール確認 →「めっちゃやる気ある子」認定</div></div><div class="flow-arrow">&darr;</div>
+    <div class="flow-step"><div class="flow-icon">5</div><div>決勝を見に来る確率が大幅UP</div></div>
+  </div>
+</section>
+
+<!-- ===== 8 ===== -->
+<section id="sec8">
+  <h2>8. バトル完全ガイド</h2>
+  <h3>バトルの始め方</h3>
+  <table><tr><th>方法</th><th>説明</th></tr>
+  <tr><td><strong>事務所PK</strong></td><td>毎週。事務所がマッチング。初心者はここから</td></tr>
+  <tr><td><strong>予約バトル</strong></td><td>日時と相手を決めて申請。イベント時に活用</td></tr>
+  <tr><td><strong>ランダム</strong></td><td>知らない人からの申請 → 基本拒否でOK</td></tr></table>
+  <h3>戦略</h3>
+  <pre>
+① 事務所PKで「しゃべること」に慣れる（勝敗より交流）
+② 慣れたら毎日1回バトルを習慣化
+③ イベント中は30分おきにバトル（量で認知を広げる）
+④ 相手は自分より「ちょっと上」→ リスナー流入の可能性
+⑤ 歌系ライバーは「歌いながらバトル」が強力な差別化になる</pre>
+</section>
+
+<!-- ===== 8b パフォーマンス配信 ===== -->
+<section id="sec8b">
+  <h2>8b. パフォーマンス配信ガイド（歌・ダンス・演奏）</h2>
+  <div class="callout info"><strong>GYM.の強み</strong>当事務所には歌配信・パフォーマンス系のライバーが多数在籍しています。バトル以外にもパフォーマンスで収益化・ファン獲得を目指す道があります。</div>
+
+  <h3>パフォーマンス配信の収益モデル</h3>
+  <div class="card">
+    <p>バトル型が「短期集中の爆発力」なら、パフォーマンス型は<strong>「固定ファンによる安定収益」</strong>。両方を組み合わせるのが理想です。</p>
+    <table><tr><th>収益源</th><th>特徴</th><th>伸ばし方</th></tr>
+    <tr><td><strong>枠投げ（通常ギフト）</strong></td><td>歌・演奏に感動して投げる</td><td>選曲力 × リアクション × 定時配信</td></tr>
+    <tr><td><strong>リクエスト制</strong></td><td>「○○歌って！」に応える</td><td>レパートリーを増やす。リスト公開</td></tr>
+    <tr><td><strong>バトル併用</strong></td><td>歌バトルで新規獲得</td><td>バトル中に歌う → 差別化で記憶に残る</td></tr>
+    <tr><td><strong>盾イベ パフォーマンス部門</strong></td><td>歌・ダンス専用ランキング</td><td>配信の2/3以上を音楽系にする</td></tr></table>
+  </div>
+
+  <h3>歌配信で同説を伸ばすコツ（一例）</h3>
+  <ol>
+    <li><strong>セットリストを事前告知</strong> — 配信前にTikTok投稿やプロフィールで今日歌う曲を予告</li>
+    <li><strong>リクエスト受付タイムを設ける</strong> — 「次の曲リクエスト募集！」でコメントを活性化</li>
+    <li><strong>MCタイム（曲間トーク）を大切に</strong> — 歌だけだと「聴くだけ」になる。曲間で自己紹介・コメント読みを必ず入れる</li>
+    <li><strong>「歌ってみた」ショート動画を投稿</strong> — LIVE外でも歌声を届け、新規流入の導線にする</li>
+    <li><strong>定番曲（持ち歌）を持つ</strong> — リスナーが「この人といえばこの曲」と覚える。ファン化の起点</li>
+  </ol>
+
+  <h3>パフォーマンス × バトルの組み合わせ戦略</h3>
+  <pre>
+【ハイブリッド配信の流れ（例：2時間配信）】
+
+  0:00〜0:30  歌配信（セットリスト前半）
+  0:30〜0:35  MC＋自己紹介＋コメント読み
+  0:35〜0:50  バトル1〜2回（歌いながらバトルも◎）
+  0:50〜1:20  歌配信（後半＋リクエスト）
+  1:20〜1:25  MC＋告知（次回配信・イベント）
+  1:25〜1:50  バトル2〜3回
+  1:50〜2:00  ラスト歌＋エンディング</pre>
+  <div class="callout"><strong>ポイント</strong>歌で引き留めてバトルで新規を呼び込む。この循環が回ると同説・ダイヤ両方が伸びます。バトル中に歌うのも強力な差別化です。</div>
+
+  <h3>盾イベ パフォーマンス部門の攻略</h3>
+  <ul>
+    <li><strong>参加条件</strong>: 配信時間の<strong>2/3以上</strong>が音楽・ダンス系であること（TikTokのAIが自動判定）</li>
+    <li><strong>カラオケ機能</strong>: TikTok内蔵のカラオケを使うと「音楽配信」として認識されやすい</li>
+    <li><strong>ダンス配信</strong>: 全身が映る画角 + 照明が重要。背景もステージ風に</li>
+    <li>ギフト部門より<strong>競争率が低い</strong>ことが多い → 入賞チャンスが大きい</li>
+    <li>入賞すると<strong>ランキングページに掲載</strong> → パフォーマンス好きの新規リスナーに発見される</li>
+  </ul>
+
+  <h3>パフォーマンス系の配信環境</h3>
+  <table><tr><th>項目</th><th>歌配信</th><th>ダンス配信</th></tr>
+  <tr><td><strong>マイク</strong></td><td>コンデンサーマイク推奨。スマホ内蔵でもOKだが差がつく</td><td>ワイヤレスピンマイク推奨</td></tr>
+  <tr><td><strong>画角</strong></td><td>バストアップ（表情重視）</td><td>全身が映る引きの画角</td></tr>
+  <tr><td><strong>照明</strong></td><td>リングライト + 色付きLEDで雰囲気づくり</td><td>全身を均一に照らす。影が出ないように</td></tr>
+  <tr><td><strong>背景</strong></td><td>ネオン・間接照明でライブハウス風</td><td>広い空間。動ける余白を確保</td></tr>
+  <tr><td><strong>音響</strong></td><td>オーディオインターフェース使用で音質UP</td><td>スピーカーからBGM + マイク別撮り</td></tr></table>
+</section>
+
+<!-- ===== 9 ===== -->
+<section id="sec9">
+  <h2>9. 配信環境チェックリスト</h2>
+  <ul class="checklist">
+    <li><strong>服装</strong>: メイク済み。パジャマNG</li>
+    <li><strong>照明</strong>: リングライト点灯。補助ライトあれば◎</li>
+    <li><strong>背景</strong>: 白壁むき出しNG。装飾あり</li>
+    <li><strong>画角</strong>: 目線の高さ〜やや上。端末安定</li>
+    <li><strong>通信</strong>: Wi-Fi接続。速度問題なし</li>
+    <li><strong>充電</strong>: 十分（配信中の充電切れは致命的）</li>
+    <li><strong>通知</strong>: 他アプリの通知OFF</li>
+  </ul>
+  <h3>ギフトリアクション設計</h3>
+  <pre>
+【基本】
+・小ギフト（バラ等）→「ありがとう！」+ 名前を呼ぶ
+・中ギフト → 大きくリアクション + 会話を深める
+・大ギフト → 全力感謝を繰り返す
+
+【応用】
+・特定ギフト → 決まったリアクション（歌う等）
+・リクエスト制 → 一番投げた人のリクエストに応える</pre>
+</section>
+
+<!-- ===== 10 ===== -->
+<section id="sec10">
+  <h2>10. よくある失敗TOP10</h2>
+  <table><tr><th>#</th><th>失敗</th><th>対処法</th></tr>
+  <tr><td>1</td><td>配信時間不足</td><td>最低1.5h死守。店を閉めたら客は来ない</td></tr>
+  <tr><td>2</td><td>バトルもパフォーマンスもしない</td><td>バトルは事務所PKから。歌系なら歌バトルやリクエスト制で接点を増やす</td></tr>
+  <tr><td>3</td><td>自己紹介しない</td><td>数分に1回必ず。新規は常に入ってくる</td></tr>
+  <tr><td>4</td><td>背景・照明が雑</td><td>第一印象が同説・滞在に直結</td></tr>
+  <tr><td>5</td><td>イベント不参加</td><td>初月からNEOに出る</td></tr>
+  <tr><td>6</td><td>コメント0で折れる</td><td>喋り続ける。それ自体がスキル</td></tr>
+  <tr><td>7</td><td>高画質を急ぐ</td><td>加工が効かなくなるリスク。まずスマホ</td></tr>
+  <tr><td>8</td><td>ランダム承認</td><td>予定バトル優先。基本拒否</td></tr>
+  <tr><td>9</td><td>ギフト催促</td><td>「フォロワー○人目指してます」→ 応援理由を作る</td></tr>
+  <tr><td>10</td><td>ショート動画を出さない</td><td>配信の切り抜きを投稿 → 新規の導線</td></tr></table>
+</section>
+
+<!-- ===== A ===== -->
+<section id="secA">
+  <h2>付録A｜盾イベ（LIVE Ranking）の構造</h2>
+  <table><tr><th>部門</th><th>評価軸</th><th>特徴</th></tr>
+  <tr><td><strong>ギフト部門</strong></td><td>ギフト総額</td><td>最も王道</td></tr>
+  <tr><td><strong>ファンダム部門</strong></td><td>ミッション達成</td><td>複数人参加が必要。「薄く広く」が有利</td></tr>
+  <tr><td><strong>パフォーマンス部門</strong></td><td>歌・ダンス等</td><td>配信の2/3以上が音楽系でないと対象外（AI判定）</td></tr></table>
+  <ul><li>レベル別チーム分け（シルバー・ゴールド等）</li><li>期間：10日間（公式最長）</li><li>ランキングページ掲載 → 新規リスナーに発見されやすい</li><li>かつては唯一「盾」がもらえるイベントだった（通称の由来）</li></ul>
+</section>
+
+<!-- ===== B ===== -->
+<section id="secB">
+  <h2>付録B｜メンタルケア &amp; モチベーション維持</h2>
+  <p>配信活動は孤独な戦いになりがちです。長く続けるために、自分のメンタルを守る方法を知っておきましょう。</p>
+  <h3>よくあるメンタルの壁</h3>
+  <table><tr><th>時期</th><th>症状</th><th>乗り越え方</th></tr>
+  <tr><td><strong>1〜2週目</strong></td><td>コメント0で心が折れる</td><td>最初は当たり前。「喋る練習」と割り切る</td></tr>
+  <tr><td><strong>3〜4週目</strong></td><td>数字が伸びず焦る</td><td>1ヶ月目は種まき期。前週の自分と比較する</td></tr>
+  <tr><td><strong>2ヶ月目</strong></td><td>他のライバーと比較して落ち込む</td><td>スタート時期・ジャンルが違う。比較対象は過去の自分だけ</td></tr>
+  <tr><td><strong>3ヶ月目</strong></td><td>マンネリ・飽き</td><td>新しいイベントに挑戦。配信スタイルを少し変えてみる</td></tr></table>
+  <h3>続けるための5つの習慣</h3>
+  <ol>
+    <li><strong>配信後に1行日記</strong> — 「今日よかったこと」を1つだけ書く。成長の実感になる</li>
+    <li><strong>休む日を決める</strong> — 週1〜2日は完全オフ。燃え尽きないことが最優先</li>
+    <li><strong>事務所メンバーと話す</strong> — 同じ立場の仲間との雑談が一番の栄養。困ったらマネージャーに相談</li>
+    <li><strong>数字を見ない日を作る</strong> — 毎日ダイヤを確認すると消耗する。週1まとめ確認でもOK</li>
+    <li><strong>配信外の自分も大切に</strong> — 趣味・友人・家族の時間が配信のネタにもなる</li>
+  </ol>
+  <div class="callout"><strong>大前提</strong>配信は「続けた人が勝つ」世界。1日の爆発より、3ヶ月の継続のほうが圧倒的に強い。</div>
+</section>
+
+<!-- ===== C ===== -->
+<section id="secC">
+  <h2>付録C｜トークテンプレート</h2>
+  <h3>配信開始時</h3>
+  <pre>
+「こんにちは！○○です！今日も配信始めます。
+ 初めての方、はじめまして！○○っていいます。
+ 配信始めて○ヶ月目で、フォロワー○人目指してます。
+ 良かったらフォローしてもらえると嬉しいです！」</pre>
+  <h3>ギフトをもらった時</h3>
+  <pre>
+「え！○○さん！ありがとうございます！
+ めっちゃ嬉しい！本当にありがとうございます！
+ ○○さんいつも来てくれてるの知ってます。」</pre>
+  <h3>コメントがない時</h3>
+  <pre>
+「今日○○があったんですけど〜」
+「最近ハマってることがあって〜」
+→ 話し続けることが最大のスキル。沈黙は離脱を生む。</pre>
+</section>
+
+<!-- ===== D ===== -->
+<section id="secD">
+  <h2>付録D｜用語集</h2>
+  <table><tr><th>用語</th><th>意味</th></tr>
+  <tr><td><strong>ダイヤ</strong></td><td>配信者が受け取るポイント。現金に換金可能</td></tr>
+  <tr><td><strong>コイン</strong></td><td>リスナーがギフトを買うための通貨</td></tr>
+  <tr><td><strong>ギフト</strong></td><td>リスナーが配信者に送るアイテム</td></tr>
+  <tr><td><strong>ギフトレベル</strong></td><td>リスナーの累計課金額を示す名前横の数字</td></tr>
+  <tr><td><strong>バトル（PK）</strong></td><td>2人の配信者がギフトを競い合うシステム</td></tr>
+  <tr><td><strong>同説</strong></td><td>同時視聴者数</td></tr>
+  <tr><td><strong>枠</strong></td><td>配信ルームのこと</td></tr>
+  <tr><td><strong>枠投げ</strong></td><td>通常配信中にギフトを投げること</td></tr>
+  <tr><td><strong>NEO STARS</strong></td><td>新人向け月次イベント</td></tr>
+  <tr><td><strong>盾イベ</strong></td><td>LIVE Rankingの通称。盾がもらえたことが由来</td></tr>
+  <tr><td><strong>グローブ</strong></td><td>バトルで使用。ランダムで5倍ボーナス</td></tr>
+  <tr><td><strong>クリエイターハブ</strong></td><td>TikTok公式の学習プログラム</td></tr>
+  <tr><td><strong>インプ</strong></td><td>インプレッション。表示された回数</td></tr></table>
+</section>
+
+</div>
+
+<footer>
+  <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAAAXNSR0IArs4c6QAAAQZlWElmTU0AKgAAAAgABwESAAMAAAABAAEAAAEaAAUAAAABAAAAYgEbAAUAAAABAAAAagEoAAMAAAABAAIAAAExAAIAAAA5AAAAcgE7AAIAAAALAAAArIdpAAQAAAABAAAAuAAAAAAAAABgAAAAAQAAAGAAAAABQ2FudmEgZG9jPURBRzZGYXRTb2prIHVzZXI9VUFFVWNWU19KS0EgYnJhbmQ9QkFFVWNaR1J0MXcAAGM4NXp5ZGhjOHYAAAAGkAAABwAAAAQwMjEwkQEABwAAAAQBAgMAoAAABwAAAAQwMTAwoAEAAwAAAAEAAQAAoAIABAAAAAEAAABQoAMABAAAAAEAAABQAAAAAKfPDBcAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAZJaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJYTVAgQ29yZSA2LjAuMCI+CiAgIDxyZGY6UkRGIHhtbG5zOnJkZj0iaHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyI+CiAgICAgIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiCiAgICAgICAgICAgIHhtbG5zOmV4aWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vZXhpZi8xLjAvIgogICAgICAgICAgICB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iCiAgICAgICAgICAgIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICAgICAgICAgICB4bWxuczpkYz0iaHR0cDovL3B1cmwub3JnL2RjL2VsZW1lbnRzLzEuMS8iPgogICAgICAgICA8ZXhpZjpDb2xvclNwYWNlPjY1NTM1PC9leGlmOkNvbG9yU3BhY2U+CiAgICAgICAgIDxleGlmOlBpeGVsWERpbWVuc2lvbj4zMDAwPC9leGlmOlBpeGVsWERpbWVuc2lvbj4KICAgICAgICAgPGV4aWY6RXhpZlZlcnNpb24+MDIxMDwvZXhpZjpFeGlmVmVyc2lvbj4KICAgICAgICAgPGV4aWY6Rmxhc2hQaXhWZXJzaW9uPjAxMDA8L2V4aWY6Rmxhc2hQaXhWZXJzaW9uPgogICAgICAgICA8ZXhpZjpQaXhlbFlEaW1lbnNpb24+MzAwMDwvZXhpZjpQaXhlbFlEaW1lbnNpb24+CiAgICAgICAgIDxleGlmOkNvbXBvbmVudHNDb25maWd1cmF0aW9uPgogICAgICAgICAgICA8cmRmOlNlcT4KICAgICAgICAgICAgICAgPHJkZjpsaT4xPC9yZGY6bGk+CiAgICAgICAgICAgICAgIDxyZGY6bGk+MjwvcmRmOmxpPgogICAgICAgICAgICAgICA8cmRmOmxpPjM8L3JkZjpsaT4KICAgICAgICAgICAgICAgPHJkZjpsaT4wPC9yZGY6bGk+CiAgICAgICAgICAgIDwvcmRmOlNlcT4KICAgICAgICAgPC9leGlmOkNvbXBvbmVudHNDb25maWd1cmF0aW9uPgogICAgICAgICA8eG1wOkNyZWF0b3JUb29sPkNhbnZhIGRvYz1EQUc2RmF0U29qayB1c2VyPVVBRVVjVlNfSktBIGJyYW5kPUJBRVVjWkdSdDF3PC94bXA6Q3JlYXRvclRvb2w+CiAgICAgICAgIDx0aWZmOlJlc29sdXRpb25Vbml0PjI8L3RpZmY6UmVzb2x1dGlvblVuaXQ+CiAgICAgICAgIDx0aWZmOk9yaWVudGF0aW9uPjE8L3RpZmY6T3JpZW50YXRpb24+CiAgICAgICAgIDx0aWZmOlhSZXNvbHV0aW9uPjk2PC90aWZmOlhSZXNvbHV0aW9uPgogICAgICAgICA8dGlmZjpZUmVzb2x1dGlvbj45NjwvdGlmZjpZUmVzb2x1dGlvbj4KICAgICAgICAgPGRjOnRpdGxlPgogICAgICAgICAgICA8cmRmOkFsdD4KICAgICAgICAgICAgICAgPHJkZjpsaSB4bWw6bGFuZz0ieC1kZWZhdWx0Ij7lkI3np7DmnKroqK3lrprjga7jg4fjgrbjgqTjg7MgLSAzPC9yZGY6bGk+CiAgICAgICAgICAgIDwvcmRmOkFsdD4KICAgICAgICAgPC9kYzp0aXRsZT4KICAgICAgICAgPGRjOmNyZWF0b3I+CiAgICAg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" alt="GYM.">
+  <p>GYM. 所属ライバー向けインサイト分析プログラム</p>
+  <p style="margin-top:6px;">&copy; 2026 株式会社ジムドット</p>
+</footer>
+
+</body>
+</html>
